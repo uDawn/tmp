@@ -31,7 +31,7 @@ import static org.junit.Assert.fail;
 public class Operation {
     private Collection<SampleOrg> testSampleOrgs;
     private static final TestConfig testConfig = TestConfig.getConfig();
-    private static final String CHANNEL_NAME = "mychannel";
+    private static final String CHANNEL_NAME = "foo";
 
     private static final String ADMIN_NAME = "admin";
     private static final String USER_1_NAME = "dddddd";
@@ -439,17 +439,7 @@ public class Operation {
                 fail("Not enough endorsers for instantiate :" + successful.size() + "endorser failed with " + first.getMessage() + ". Was verified:" + first.isVerified());
             }
 
-            channel.sendTransaction(successful, orderers).thenApply(transactionEvent -> {
-                out("Finished instantiate transaction with transaction id %s", transactionEvent.getTransactionID());
-                return null;
-            }).thenApply(transactionEvent -> {
-                out("Finished m");
-                return  null;
-            }).exceptionally(e -> {
-                out("Finished f");
-                return null;
-            }).get(testConfig.getTransactionWaitTime(), TimeUnit.SECONDS);
-
+            channel.sendTransaction(successful, orderers).get(testConfig.getTransactionWaitTime(), TimeUnit.SECONDS);
             out("Instantiate end!");
         } catch (Exception e) {
             e.printStackTrace();
@@ -535,7 +525,7 @@ public class Operation {
             transactionProposalRequest.setChaincodeID(this.chaincodeID);
             transactionProposalRequest.setFcn("invoke");
             transactionProposalRequest.setProposalWaitTime(testConfig.getProposalWaitTime());
-            transactionProposalRequest.setArgs(new String[]{"transfer", tmp_account_1, tmp_account_2, tmp_amount});
+            transactionProposalRequest.setArgs(new String[]{"move", tmp_account_1, tmp_account_2, tmp_amount});
 
             Map<String, byte[]> tm2 = new HashMap<>();
             tm2.put("HyperLedgerFabric", "TransactionProposalRequest:JavaSDK".getBytes(UTF_8));
@@ -628,8 +618,8 @@ public class Operation {
                 ////////////////////////////
                 // Send Query Proposal to all peers
                 //
-                String expect = "300";
-                out("Now query chaincode for the value of b.");
+               // String expect = "300";
+                out("Now query chaincode for the value of %s." , account);
                 QueryByChaincodeRequest queryByChaincodeRequest = client.newQueryProposalRequest();
                 queryByChaincodeRequest.setArgs(new String[]{"query", account});
                 queryByChaincodeRequest.setFcn("invoke");
@@ -649,8 +639,8 @@ public class Operation {
                     } else {
                         String payload = proposalResponse.getProposalResponse().getResponse().getPayload().toStringUtf8();
                         tmp_amount = payload;
-                        out("Query payload of b from peer %s returned %s", proposalResponse.getPeer().getName(), payload);
-                        assertEquals(payload, expect);
+                        out("Query payload of %s from peer %s returned %s",account ,  proposalResponse.getPeer().getName(), payload);
+                       // assertEquals(payload, expect);
                     }
                 }
 
