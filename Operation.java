@@ -140,7 +140,12 @@ public class Operation {
             String res_2 = "not2";
             String res_3 = "not3";
             String res_4 = "not4";
-
+            String res_5 = "not5";
+            String res_6 = "not6";
+            String res_7 = "not7";
+            String new_account = "cc";
+            String new_amount = "1000";
+            
             res_1 = this.query("a");
             res_2 = this.query("b");
             out(String.format("New construct res_1:%s , res_2:%s", res_1, res_2));
@@ -148,6 +153,15 @@ public class Operation {
             res_3 = this.query("a");
             res_4 = this.query("b");
             out(String.format("res_3:%s , res_4:%s", res_3, res_4));
+
+            out("New account!");
+            this.initiate(new_account , new_amount);
+            res_5 = this.query(new_account);
+            out("res_5:%s" , res_5);
+            this.transfer("a" , new_account , "10");
+            res_6 = this.query("a");
+            res_7 = this.query(new_account);
+            out(String.format("res_6:%s , res_7:%s", res_6, res_7));
 
             this.myChannel = reconstructChannel(this.CHANNEL_NAME, this.client, this.sampleOrg);
 
@@ -525,7 +539,7 @@ public class Operation {
             transactionProposalRequest.setChaincodeID(this.chaincodeID);
             transactionProposalRequest.setFcn("invoke");
             transactionProposalRequest.setProposalWaitTime(testConfig.getProposalWaitTime());
-            transactionProposalRequest.setArgs(new String[]{"move", tmp_account_1, tmp_account_2, tmp_amount});
+            transactionProposalRequest.setArgs(new String[]{"transfer", tmp_account_1, tmp_account_2, tmp_amount});
 
             Map<String, byte[]> tm2 = new HashMap<>();
             tm2.put("HyperLedgerFabric", "TransactionProposalRequest:JavaSDK".getBytes(UTF_8));
@@ -533,7 +547,7 @@ public class Operation {
             tm2.put("result", ":)".getBytes(UTF_8));  /// This should be returned see chaincode.
             transactionProposalRequest.setTransientMap(tm2);
 
-            out(String.format("sending transactionProposal to all peers with arguments: move(%s,%s,%s)", tmp_account_1, tmp_account_2, tmp_amount));
+            out(String.format("sending transactionProposal to all peers with arguments: transfer(%s,%s,%s)", tmp_account_1, tmp_account_2, tmp_amount));
 
             Collection<ProposalResponse> transactionPropResp = this.myChannel.sendTransactionProposal(transactionProposalRequest, this.myChannel.getPeers());
             for (ProposalResponse response : transactionPropResp) {
@@ -556,7 +570,7 @@ public class Operation {
                     transactionPropResp.size(), successful.size(), failed.size());
             if (failed.size() > 0) {
                 ProposalResponse firstTransactionProposalResponse = failed.iterator().next();
-                fail(String.format("Not enough endorsers for invoke(move %s,%s,%s):", tmp_account_1, tmp_account_2, tmp_amount) + failed.size() + " endorser error: " +
+                fail(String.format("Not enough endorsers for invoke(transfer %s,%s,%s):", tmp_account_1, tmp_account_2, tmp_amount) + failed.size() + " endorser error: " +
                         firstTransactionProposalResponse.getMessage() +
                         ". Was verified: " + firstTransactionProposalResponse.isVerified());
             }
@@ -585,7 +599,7 @@ public class Operation {
 
             ////////////////////////////
             // Send Transaction Transaction to orderer
-            out("Sending chaincode transaction(move %s,%s,%s) to orderer.", tmp_account_1, tmp_account_2, tmp_amount);
+            out("Sending chaincode transaction(transfer %s,%s,%s) to orderer.", tmp_account_1, tmp_account_2, tmp_amount);
             this.myChannel.sendTransaction(successful).get(testConfig.getTransactionWaitTime(), TimeUnit.SECONDS);
             return true;
         } catch (Exception e) {
@@ -672,79 +686,101 @@ public class Operation {
     }
 
     public boolean initiate(String account, String amount) {
+        String tmp_account = account;
+        String tmp_amount = amount;
+
         final String channelName = this.myChannel.getName();
-        boolean isFooChain = CHANNEL_NAME.equals(channelName);
-        out("Running channel %s", channelName);
+
+        out("Running initiate.");
+
         this.myChannel.setTransactionWaitTime(testConfig.getTransactionWaitTime());
         this.myChannel.setDeployWaitTime(testConfig.getDeployWaitTime());
 
-        Collection<Peer> channelPeers = this.myChannel.getPeers();
-        Collection<Orderer> orderers = this.myChannel.getOrderers();
-
-        Collection<ProposalResponse> responses;
+        //Collection<ProposalResponse> responses;
         Collection<ProposalResponse> successful = new LinkedList<>();
         Collection<ProposalResponse> failed = new LinkedList<>();
 
+        //responses = this.myChannel.sendTransactionProposal().sendInstantiationProposal(instantiateProposalRequest, channel.getPeers());
+
         try {
-            InstantiateProposalRequest instantiateProposalRequest = client.newInstantiationProposalRequest();
-            instantiateProposalRequest.setProposalWaitTime(testConfig.getProposalWaitTime());
-            instantiateProposalRequest.setChaincodeID(chaincodeID);
-            instantiateProposalRequest.setFcn("init");
-            instantiateProposalRequest.setArgs(new String[]{"a", "500", "b", "" + (amount)});
-            Map<String, byte[]> tm = new HashMap<>();
-            tm.put("HyperLedgerFabric", "InstantiateProposalRequest:JavaSDK".getBytes(UTF_8));
-            tm.put("method", "InstantiateProposalRequest".getBytes(UTF_8));
-            instantiateProposalRequest.setTransientMap(tm);
 
-            /*
-              policy OR(Org1MSP.member, Org2MSP.member) meaning 1 signature from someone in either Org1 or Org2
-              See README.md Chaincode endorsement policies section for more details.
-            */
-            ChaincodeEndorsementPolicy chaincodeEndorsementPolicy = new ChaincodeEndorsementPolicy();
-            chaincodeEndorsementPolicy.fromYamlFile(new File(FIXTURES_PATH + "chaincodeendorsementpolicy.yaml"));
-            instantiateProposalRequest.setChaincodeEndorsementPolicy(chaincodeEndorsementPolicy);
+            this.client.setUserContext(this.sampleOrg.getUser(USER_1_NAME));
 
-            out("Sending instantiateProposalRequest to all peers with arguments: a and b set to 100 and %s respectively", "" + (amount));
-            successful.clear();
-            failed.clear();
+            ///////////////
+            /// Send transaction proposal to all peers
+            TransactionProposalRequest transactionProposalRequest = this.client.newTransactionProposalRequest();
+            transactionProposalRequest.setChaincodeID(this.chaincodeID);
+            transactionProposalRequest.setFcn("invoke");
+            transactionProposalRequest.setProposalWaitTime(testConfig.getProposalWaitTime());
+            transactionProposalRequest.setArgs(new String[]{"give", tmp_account , tmp_amount});
 
-            if (isFooChain) {  //Send responses both ways with specifying peers and by using those on the channel.
-                responses = this.myChannel.sendInstantiationProposal(instantiateProposalRequest, this.myChannel.getPeers());
-            } else {
-                responses = this.myChannel.sendInstantiationProposal(instantiateProposalRequest);
+            Map<String, byte[]> tm2 = new HashMap<>();
+            tm2.put("HyperLedgerFabric", "TransactionProposalRequest:JavaSDK".getBytes(UTF_8));
+            tm2.put("method", "TransactionProposalRequest".getBytes(UTF_8));
+            tm2.put("result", ":)".getBytes(UTF_8));  /// This should be returned see chaincode.
+            transactionProposalRequest.setTransientMap(tm2);
 
-            }
-            for (ProposalResponse response : responses) {
-                if (response.isVerified() && response.getStatus() == ProposalResponse.Status.SUCCESS) {
+            out(String.format("sending transactionProposal to all peers with arguments: give(%s,%s)", tmp_account , tmp_amount));
+
+            Collection<ProposalResponse> transactionPropResp = this.myChannel.sendTransactionProposal(transactionProposalRequest, this.myChannel.getPeers());
+            for (ProposalResponse response : transactionPropResp) {
+                if (response.getStatus() == ProposalResponse.Status.SUCCESS) {
+                    out("Successful transaction proposal response Txid: %s from peer %s", response.getTransactionID(), response.getPeer().getName());
                     successful.add(response);
-                    out("Succesful instantiate proposal response Txid: %s from peer %s", response.getTransactionID(), response.getPeer().getName());
                 } else {
                     failed.add(response);
                 }
             }
-            out("Received %d instantiate proposal responses. Successful+verified: %d . Failed: %d", responses.size(), successful.size(), failed.size());
-            if (failed.size() > 0) {
-                ProposalResponse first = failed.iterator().next();
-                fail("Not enough endorsers for instantiate :" + successful.size() + "endorser failed with " + first.getMessage() + ". Was verified:" + first.isVerified());
+
+            // Check that all the proposals are consistent with each other. We should have only one set
+            // where all the proposals above are consistent.
+            Collection<Set<ProposalResponse>> proposalConsistencySets = SDKUtils.getProposalConsistencySets(transactionPropResp);
+            if (proposalConsistencySets.size() != 1) {
+                fail(format("Expected only one set of consistent proposal responses but got %d", proposalConsistencySets.size()));
             }
 
-            ///////////////
-            /// Send instantiate transaction to orderer
-            out("Sending instantiateTransaction to orderer with a and b set to 100 and %s respectively", "" + (amount));
-            this.myChannel.sendTransaction(successful, orderers).thenApply(transactionEvent -> {
+            out("Received %d transaction proposal responses. Successful+verified: %d . Failed: %d",
+                    transactionPropResp.size(), successful.size(), failed.size());
+            if (failed.size() > 0) {
+                ProposalResponse firstTransactionProposalResponse = failed.iterator().next();
+                fail(String.format("Not enough endorsers for invoke(give %s,%s):", tmp_account, tmp_amount) + failed.size() + " endorser error: " +
+                        firstTransactionProposalResponse.getMessage() +
+                        ". Was verified: " + firstTransactionProposalResponse.isVerified());
+            }
+            out("Successfully received transaction proposal responses.");
 
-                //waitOnFabric(0);
+            ProposalResponse resp = transactionPropResp.iterator().next();
+            byte[] x = resp.getChaincodeActionResponsePayload(); // This is the data returned by the chaincode.
+            String resultAsString = null;
+            if (x != null) {
+                resultAsString = new String(x, "UTF-8");
+            }
+            assertEquals(":)", resultAsString);
 
-                assertTrue(transactionEvent.isValid()); // must be valid to be here.
-                out("Finished instantiate transaction with transaction id %s", transactionEvent.getTransactionID());
+            assertEquals(200, resp.getChaincodeActionResponseStatus()); //Chaincode's status.
 
-                return true;
-            });
+            TxReadWriteSetInfo readWriteSetInfo = resp.getChaincodeActionResponseReadWriteSetInfo();
+            //See blockwalker below how to transverse this
+            assertNotNull(readWriteSetInfo);
+            assertTrue(readWriteSetInfo.getNsRwsetCount() > 0);
+
+            ChaincodeID cid = resp.getChaincodeID();
+            assertNotNull(cid);
+            //assertEquals(CHAIN_CODE_PATH, cid.getPath());
+            assertEquals(CHAIN_CODE_NAME, cid.getName());
+            assertEquals(CHAIN_CODE_VERSION, cid.getVersion());
+
+            ////////////////////////////
+            // Send Transaction Transaction to orderer
+            out("Sending chaincode transaction(give %s,%s) to orderer.", tmp_account, tmp_amount);
+            this.myChannel.sendTransaction(successful).get(testConfig.getTransactionWaitTime(), TimeUnit.SECONDS);
+            return true;
         } catch (Exception e) {
-
+            out("Caught an exception while invoking chaincode");
+            e.printStackTrace();
+            fail("Failed invoking chaincode with error : " + e.getMessage());
+            return false;
         }
-
-        return false;
     }
 
     public void shutdown() {
