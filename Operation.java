@@ -34,13 +34,12 @@ public class Operation {
     private static final String CHANNEL_NAME = "foo";
 
     private static final String ADMIN_NAME = "admin";
-    private static final String USER_1_NAME = "dddddd";
+    private static final String USER_1_NAME = "ddd";
     private static final String FIXTURES_PATH = "src/test/fixture";
 
     private static final String CHAIN_CODE_NAME = "mycc";
     private static final String CHAIN_CODE_PATH = "github.com/example_cc";
-    private static final String CHAIN_CODE_VERSION = "1";
-
+    private static final String CHAIN_CODE_VERSION = "1.0";
     private String testTxID = null;
 
     private HFClient client;
@@ -133,7 +132,7 @@ public class Operation {
                     .setPath(CHAIN_CODE_PATH).build();
 
             this.myChannel = constructChannel(this.CHANNEL_NAME, this.client, this.sampleOrg);
-            this.installChaincode(this.client, this.myChannel, this.sampleOrg);
+           this.installChaincode(this.client, this.myChannel, this.sampleOrg);
             this.instantiateChaincode(this.client, this.myChannel, this.sampleOrg);
 
             String res_1 = "not1";
@@ -367,7 +366,7 @@ public class Operation {
             // on foo chain install from directory.
 
             ////For GO language and serving just a single user, chaincodeSource is mostly likely the users GOPATH
-            installProposalRequest.setChaincodeSourceLocation(new File(FIXTURES_PATH + "/sdkintegration/gocc/sample1"));
+            installProposalRequest.setChaincodeSourceLocation(new File(FIXTURES_PATH + "/sdkintegration/gocc/sample1/"));
 
             installProposalRequest.setChaincodeVersion(CHAIN_CODE_VERSION);
 
@@ -537,9 +536,9 @@ public class Operation {
             /// Send transaction proposal to all peers
             TransactionProposalRequest transactionProposalRequest = this.client.newTransactionProposalRequest();
             transactionProposalRequest.setChaincodeID(this.chaincodeID);
-            transactionProposalRequest.setFcn("invoke");
+            transactionProposalRequest.setFcn("transfer");
             transactionProposalRequest.setProposalWaitTime(testConfig.getProposalWaitTime());
-            transactionProposalRequest.setArgs(new String[]{"transfer", tmp_account_1, tmp_account_2, tmp_amount});
+            transactionProposalRequest.setArgs(new String[]{tmp_account_1, tmp_account_2, tmp_amount});
 
             Map<String, byte[]> tm2 = new HashMap<>();
             tm2.put("HyperLedgerFabric", "TransactionProposalRequest:JavaSDK".getBytes(UTF_8));
@@ -582,7 +581,7 @@ public class Operation {
             if (x != null) {
                 resultAsString = new String(x, "UTF-8");
             }
-            assertEquals(":)", resultAsString);
+            //assertEquals(":)", resultAsString);
 
             assertEquals(200, resp.getChaincodeActionResponseStatus()); //Chaincode's status.
 
@@ -635,8 +634,8 @@ public class Operation {
                // String expect = "300";
                 out("Now query chaincode for the value of %s." , account);
                 QueryByChaincodeRequest queryByChaincodeRequest = client.newQueryProposalRequest();
-                queryByChaincodeRequest.setArgs(new String[]{"query", account});
-                queryByChaincodeRequest.setFcn("invoke");
+                queryByChaincodeRequest.setArgs(new String[]{account});
+                queryByChaincodeRequest.setFcn("query");
                 queryByChaincodeRequest.setChaincodeID(chaincodeID);
 
                 Map<String, byte[]> tm2 = new HashMap<>();
@@ -710,9 +709,9 @@ public class Operation {
             /// Send transaction proposal to all peers
             TransactionProposalRequest transactionProposalRequest = this.client.newTransactionProposalRequest();
             transactionProposalRequest.setChaincodeID(this.chaincodeID);
-            transactionProposalRequest.setFcn("invoke");
+            transactionProposalRequest.setFcn("give");
             transactionProposalRequest.setProposalWaitTime(testConfig.getProposalWaitTime());
-            transactionProposalRequest.setArgs(new String[]{"give", tmp_account , tmp_amount});
+            transactionProposalRequest.setArgs(new String[]{tmp_account , tmp_amount});
 
             Map<String, byte[]> tm2 = new HashMap<>();
             tm2.put("HyperLedgerFabric", "TransactionProposalRequest:JavaSDK".getBytes(UTF_8));
@@ -755,7 +754,7 @@ public class Operation {
             if (x != null) {
                 resultAsString = new String(x, "UTF-8");
             }
-            assertEquals(":)", resultAsString);
+            //assertEquals(":)", resultAsString);
 
             assertEquals(200, resp.getChaincodeActionResponseStatus()); //Chaincode's status.
 
